@@ -5,6 +5,7 @@ Tool-neutral rules for coding agents (Claude Code, Codex, Cursor, and others).
 Companion modules, load only when they apply:
 
 * [`web-app.md`](web-app.md): repositories with a UI or an HTTP surface.
+* [`infrastructure.md`](infrastructure.md): infrastructure as code, deploy scripts, and migrations.
 * [`multi-agent.md`](multi-agent.md): spawning, briefing, and reviewing sub-agents or second-opinion agents.
 
 ## 1. Instruction Priority

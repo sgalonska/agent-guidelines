@@ -22,6 +22,8 @@ Sub-agents do not spawn further sub-agents unless the brief says they may. Keep 
 
 Pick the tier per task. Do not default everything to the session's own model.
 
+Routing only applies when more than one model is actually available to you. If the harness offers a single model, or the project's configuration does not let you choose, run everything on that model and skip this section. Never assume a model exists, never invent a model name, and never change the model by working around the harness. If a requested tier is unavailable, use the model you have and, for high-judgment work, say so in the report.
+
 **Lower tier:** mechanical, low-judgment work where a wrong draft is cheaply caught in review.
 
 * Templated code following an existing pattern, boilerplate, renames
@@ -80,7 +82,7 @@ A sub-agent's report describes what it intended, not necessarily what it did.
 
 ## 6. Second Opinions From Another Agent
 
-Use a different agent or model as an independent reviewer for designs, plans, and risky diffs.
+Use a different agent or model as an independent reviewer for designs, plans, and risky diffs, but only if one is actually available and authorized. If it is not, review with a fresh sub-agent of the same model briefed with the code but not your conclusion, or say the review was not independent.
 
 * Default to a **read-only** sandbox for advisory runs. Allow writes only when the task is to create files.
 * Run CLIs non-interactively and **close stdin** (`< /dev/null`), or they may hang waiting for input.

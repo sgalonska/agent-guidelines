@@ -6,7 +6,7 @@ Terms: the **main session** talks to the user. A **sub-agent** is anything it la
 
 ## 1. When to Spawn
 
-Spawn when it buys time, cost, or quality:
+Spawn when it buys time, cost, or quality. Delegating mechanical work to a lower tier is the default: do it without waiting to be asked, then review the result.
 
 * Independent work that can run in parallel.
 * A side task that should not block the main thread.
@@ -24,7 +24,7 @@ Pick the tier per task. Do not default everything to the session's own model.
 
 **Routing applies only when more than one model is actually available to you.** Single model, or no way to choose? Run everything on it and skip this section. Never assume a model exists, never invent a model name, never hack around the harness to switch models. A requested tier is unavailable? Use what you have and, for high-judgment work, say so in the report.
 
-**Lower tier:** mechanical work where a wrong draft is cheap to catch.
+**Lower tier:** mechanical work where a wrong draft is cheap to catch. Delegate it by default; review the output before treating the work as done.
 
 * Templated code following an existing pattern, boilerplate, renames
 * Docs edits, test scaffolding

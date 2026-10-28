@@ -6,7 +6,7 @@ Terms: the **main session** talks to the user. A **sub-agent** is anything it la
 
 ## 1. When to Spawn
 
-Spawn when it buys time, cost, or quality. Delegating mechanical work to a lower tier is the default: do it without waiting to be asked, then review the result.
+Spawn when it buys time, cost, or quality. Delegating mechanical work to a lower tier is the default when the work is big enough to repay the cost: do it without waiting to be asked, then review the result.
 
 * Independent work that can run in parallel.
 * A side task that should not block the main thread.
@@ -14,7 +14,7 @@ Spawn when it buys time, cost, or quality. Delegating mechanical work to a lower
 * A review that must not be anchored on your own reasoning.
 * Mechanical work a cheaper tier can do.
 
-Do not spawn for a handful of tool calls or a lookup whose target you know. Do not delegate a check you can run inline. Never redo a task you already delegated.
+A brief, the sub-agent's own context, and your review all cost tokens, so small work stays inline. Do not spawn for a handful of tool calls or a lookup whose target you know. Do not delegate a check you can run inline. Never redo a task you already delegated.
 
 Sub-agents do not spawn their own unless the brief allows it. Keep fan-out under ten unless the user asks for scale.
 

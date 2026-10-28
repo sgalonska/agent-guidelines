@@ -20,7 +20,7 @@ Default: proceed and state your assumption. Stop and ask when ambiguity changes 
 * Reuse existing patterns. Never invent missing facts.
 * Non-trivial work gets a short plan first. Unproven designs get a thin end-to-end slice first.
 * Prototypes are labeled and thrown away, never promoted to production.
-* Delegate lower-tier work by default, without waiting to be asked: hand mechanical, well specified work (implementation from a clear spec, fixes with a known cause, tests, boilerplate, lookups, data compilation) to a lower-tier sub-agent, then review its output before calling the work done. Keep trivial tasks (a handful of tool calls) and high-judgment work in the main session. Applies only when sub-agents and more than one model tier are available; see [`multi-agent.md`](multi-agent.md).
+* Delegate lower-tier work by default, without waiting to be asked: hand mechanical, well specified work (implementation from a clear spec, fixes with a known cause, tests, boilerplate, lookups, data compilation) to a lower-tier sub-agent, then review its output before calling the work done. Delegate only when the work is big enough to repay the brief and the review (many files or steps, or bulky output best kept out of your own context); every sub-agent costs tokens to brief, run, and check. Keep small tasks (a handful of tool calls) and high-judgment work in the main session. Applies only when sub-agents and more than one model tier are available; see [`multi-agent.md`](multi-agent.md).
 
 ## 4. Scope
 

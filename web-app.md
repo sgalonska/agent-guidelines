@@ -1,203 +1,132 @@
 # Web App Guidelines
 
-Applies on top of [`AGENTS.md`](AGENTS.md) to repositories with a UI or an HTTP surface. Repository-local instructions override these defaults. Where a section does not apply to the stack, say so rather than silently skipping it.
+On top of [`AGENTS.md`](AGENTS.md), for repos with a UI or HTTP surface. If a section does not fit the stack, say so; do not skip it silently.
 
-## 1. Complete User Experiences
+## 1. Every State, Not Just the Happy Path
 
-For each user-visible flow, handle where relevant:
-
-* Initial, loading, empty, success, partial, stale, error, offline, and retry states.
-* Pending and duplicate submissions.
-* Permission-denied and expired-session states.
-* Slow responses, cancellation, and recovery after interruption.
-* Responsive layouts, touch targets, long content, and narrow viewports.
-* Refresh, deep links, back and forward navigation, shareable URLs.
-
-Preserve user input after recoverable failures. Give destructive actions clear consequences, confirmation where warranted, and a recovery path where practical. Do not rely on color, animation, hover, or client-side validation alone to communicate meaning.
-
-Reuse the existing design system, tokens, and components. Do not hand-roll a control the system already provides.
+* Handle loading, empty, partial, stale, error, offline, retry, permission-denied, and expired-session states.
+* Handle double submits, slow responses, cancellation, and interruption.
+* Narrow viewports, long content, touch targets. Refresh, deep links, back/forward, and shareable URLs all work.
+* Keep user input after recoverable failures. Destructive actions spell out consequences, confirm when warranted, and offer recovery where practical.
+* Never carry meaning by color, hover, animation, or client-side validation alone.
+* Use the existing design system. Do not hand-roll a control it already has.
 
 ## 2. Accessibility
 
-Target WCAG 2.2 AA unless the repository sets a different bar.
+WCAG 2.2 AA unless the repo says otherwise.
 
-* Use semantic HTML before ARIA. Every control has an accessible name.
-* All functionality works by keyboard with a visible focus indicator and a logical order.
-* Manage focus on route changes, dialogs, and dynamic content. Trap and restore focus in modals.
-* Announce async status and errors to assistive technology.
-* Meet contrast requirements. Support zoom to 200% and reflow at narrow widths.
-* Honor `prefers-reduced-motion` and avoid motion-only meaning.
-* Associate labels, errors, and help text with form fields.
+* Semantic HTML before ARIA. Every control has an accessible name; labels, errors, and help text bind to their fields.
+* Everything works by keyboard, with visible focus and logical order. Manage focus on route changes and dynamic content; trap and restore it in modals.
+* Announce async status and errors. Meet contrast, support 200% zoom and reflow, honor `prefers-reduced-motion`.
+* axe is not a keyboard pass. Say which you did.
 
-Automated checks (axe or equivalent) do not replace a manual keyboard pass. State which you did.
+## 3. Frontend State
 
-## 3. Frontend State and Boundaries
+* One source of truth per piece of state. Do not mirror server data into random client state.
+* Draw server/client rendering boundaries on purpose: no hydration mismatches, layout shift, or stale updates. Drop superseded requests.
+* Error boundaries so one broken component does not blank the page. Progressive enhancement where the stack supports it.
+* Nothing server-only (config, secrets, internal IDs, privileged logic) ships in a browser bundle.
 
-* Keep one source of truth for each piece of state. Do not duplicate server data into unrelated client state.
-* Define server and client rendering boundaries deliberately. Prevent hydration mismatches, layout shift, and stale updates.
-* Cancel or ignore obsolete requests when a newer action supersedes them.
-* Use error boundaries so one failing component does not blank the page.
-* Use progressive enhancement where the stack supports it.
-* Never expose server-only configuration, secrets, internal identifiers, or privileged logic in browser bundles.
+## 4. APIs
 
-## 4. API Design
-
-* Define request, response, error, and auth schemas, and keep generated clients and docs consistent with the implementation.
-* Use HTTP methods, status codes, redirects, and cache headers consistently.
-* Validate content type, size, shape, ranges, and unknown fields at the boundary.
-* Make retryable mutations idempotent or support an idempotency key.
-* Paginate with stable ordering and explicit limits.
+* Schemas for request, response, error, and auth. Generated clients and docs match the implementation.
+* Consistent methods, status codes, and cache headers. Validate type, size, shape, ranges, and unknown fields at the edge.
+* Retryable mutations are idempotent or take an idempotency key. Paginate with stable order and explicit limits.
 * Define timeouts, cancellation, concurrency control, and rate limits.
-* Do not leak resource existence across authorization boundaries (prefer 404 where the caller may not know).
-* Document versioning and deprecation. Prefer additive change.
+* Do not leak resource existence across authz boundaries (404 over 403 where appropriate). Version and deprecate additively.
 
-## 5. Authentication and Authorization
+## 5. Auth
 
-* Use the framework's or an established library's mechanisms for auth, password hashing, sessions, and crypto. Do not write your own.
-* Enforce authorization server-side on every protected action, against the requested object, tenant, and role. Deny by default.
-* Add a tenant-isolation test for every new query or endpoint that touches tenant data.
-* Protect cookie-authenticated mutations against CSRF. Use `HttpOnly`, `Secure`, and an explicit `SameSite` on session cookies.
-* Rotate session identifiers on login and privilege change. Support logout, expiry, revocation, and invalidation on credential change.
-* Prevent account enumeration in login and recovery flows.
-* Validate redirect targets against an allowlist.
-* Rate-limit and monitor sensitive endpoints.
-* No long-lived bearer credentials in URLs. No tokens in browser-accessible storage without a documented threat model.
-* Audit-log privileged and security-relevant actions with actor, target, and time.
+* Use the framework or an established library for auth, hashing, sessions, and crypto. Never roll your own.
+* Authorize server-side on every protected action, against object, tenant, and role. Deny by default.
+* **Every new query or endpoint touching tenant data gets a tenant-isolation test.**
+* CSRF protection on cookie-auth mutations. Session cookies are `HttpOnly`, `Secure`, explicit `SameSite`. Rotate session IDs on login and privilege change; support logout, expiry, and revocation.
+* No account enumeration. Allowlist redirect targets. Rate-limit sensitive endpoints.
+* No long-lived credentials in URLs, no tokens in browser storage without a documented threat model.
+* Audit-log privileged actions: actor, target, time.
 
 ## 6. Web Security Defaults
 
-* Set a restrictive Content-Security-Policy, HSTS, `X-Content-Type-Options`, and a sensible `Referrer-Policy`. Keep CORS to an explicit allowlist, never reflected origins with credentials.
-* Escape output by context. Treat user-supplied HTML, Markdown, and URLs as untrusted; sanitize with a maintained library.
-* File uploads: enforce type and size limits by content, not extension; scan where required; store outside the web root with generated names; serve with safe headers.
-* Guard server-side fetches of user-supplied URLs against SSRF.
-* Pin and review third-party scripts. Use subresource integrity where scripts load from a CDN.
+* Restrictive CSP, HSTS, `X-Content-Type-Options`, sane `Referrer-Policy`. CORS is an explicit allowlist, never a reflected origin with credentials.
+* Escape output by context. User HTML, Markdown, and URLs are untrusted; sanitize with a maintained library.
+* Uploads: check type and size by content (not extension), scan where required, store outside the web root under generated names, serve with safe headers.
+* Guard server-side fetches of user URLs against SSRF. Pin third-party scripts; use SRI for CDN loads.
 
 ## 7. Databases
 
-Every schema change ships as a migration with a compatibility plan.
+Every schema change is a migration with a compatibility plan.
 
-* Expand, migrate, then contract. Old and new app versions must both work during rollout.
-* Assess locks, table rewrites, index builds, and transaction length.
-* Backfill in bounded, observable, resumable batches.
-* Add constraints only after validating existing data.
-* State defaults, nullability, ownership, and deletion behavior explicitly.
-* Test migrations against representative existing data, on both fresh and upgrade paths.
-* Never combine irreversible data deletion with the release that first stops reading that data.
-* Check that a restore works, not only that a backup exists, for any new store.
-
-Store timestamps in UTC. Represent money as integer minor units or decimals, never floats. Use opaque identifiers for anything user-visible.
+* Expand, migrate, contract. Old and new app versions both work mid-rollout.
+* Check locks, rewrites, index builds, and transaction length. Backfill in bounded, resumable batches.
+* Validate existing data before adding constraints. Be explicit about defaults, nullability, ownership, and deletion behavior.
+* Test on fresh and upgrade paths with realistic data.
+* Never delete data in the same release that stops reading it. For a new store, prove restore, not just backup.
+* UTC timestamps. Money as integer minor units or decimals, never floats. Opaque user-visible IDs.
 
 ## 8. Async Work and Webhooks
 
-* Assume delivery can be duplicated, delayed, reordered, or lost. Make consumers idempotent.
-* Bound retries with backoff and jitter. Separate retryable from permanent failures.
-* Define timeout, dead-letter, replay, and operator-recovery behavior.
-* Propagate correlation IDs.
-* Authenticate webhooks and defend against replay.
-* Commit required durable state before acknowledging work.
-* Document ordering and consistency guarantees; do not imply stronger ones.
+* Delivery will be duplicated, late, reordered, or lost. Consumers are idempotent.
+* Bounded retries with backoff and jitter; separate retryable from permanent failures. Define dead-letter, replay, and operator recovery.
+* Commit durable state before acking. Propagate correlation IDs. Authenticate webhooks and block replays.
+* Do not promise ordering or consistency you do not have.
 
-## 9. Configuration and Secrets
+## 9. Config and Observability
 
-* Keep configuration explicit, typed, and validated at startup. Fail fast on missing or malformed required values.
-* Distinguish build-time, deploy-time, and runtime values.
-* Document new variables in the example file with safe placeholders.
-* Keep secrets out of source control, logs, errors, fixtures, URLs, and browser bundles. Use the repository's secret manager.
-* Scope credentials to the minimum permission and lifetime.
-* No silent fallback to insecure defaults in production.
-* Tests must not depend on production credentials or services.
+* Config is typed and validated at startup; missing or malformed required values crash immediately. No silent insecure fallback in production.
+* Keep build-time, deploy-time, and runtime values distinct. Secrets come from the repo's secret manager and never reach fixtures, URLs, errors, or bundles.
+* New variables go in the example file with safe placeholders. Tests never need production credentials.
+* Structured logs with stable event names, secrets and personal data redacted. Propagate request, trace, and job IDs.
+* New critical paths get latency, error, and saturation metrics plus health and readiness signals. Alerts are actionable; user errors page nobody.
 
-## 10. Observability
+## 10. CI and Deployment
 
-* Structured logs with stable event names and severity. Redact secrets and personal data.
-* Propagate request, trace, and job IDs across services and queues.
-* Record latency, throughput, error, and saturation metrics for new critical paths.
-* Provide health and readiness signals.
-* Alerts are actionable and tied to user impact. Expected user errors do not page anyone.
+* Locked deps, reproducible builds, one immutable artifact promoted across environments.
+* CI runs format, lint, types, tests, build, migrations, and security checks. Never make a gate pass by skipping work.
+* Sequence app, migration, worker, and cache changes safely. Know the rollback or forward fix before a risky release.
+* Environment differences live in config, not branches. Feature flags have an owner, a safe default, and a removal condition.
+* Pin third-party CI actions. After deploy, check health and one critical path.
 
-## 11. CI and Deployment
+## 11. Performance
 
-* Locked dependencies and reproducible build commands.
-* CI runs format, lint, type, test, build, migration, and security checks. Never make a gate pass by skipping work or lowering coverage.
-* Build one immutable artifact and promote it across environments.
-* Sequence app, migration, worker, and cache changes safely. Define rollback or forward recovery before high-risk releases.
-* Environment differences live in configuration, not branches.
-* Feature flags have an owner, a safe default, an observable rollout, and a removal condition.
-* Pin third-party CI actions. Verify health and one critical path after deploy.
+Use the repo's budgets; without them, baseline before claiming anything. Watch server latency, query count, and pool use; JS, CSS, image, and font weight, request count, layout stability, and interaction latency; queue depth and job duration; cache hit rate and invalidation. Measure on a production-like build with realistic data, devices, and networks. Material regressions fail unless explicitly accepted. Every new dependency gets a bundle-size check.
 
-## 12. Performance Budgets
+## 12. Verify in a Real Browser
 
-Use the repository's budgets. If none exist, take a baseline before claiming an improvement or regression.
+User-facing change? Run the app and drive the changed flow end to end in a real browser, not just a DOM test.
 
-* Server: latency, query count, connection-pool use.
-* Browser: JavaScript, CSS, image, and font weight; request count; layout stability; interaction latency.
-* Background: queue depth and job duration.
-* Caching: hit rate and invalidation correctness.
+* Narrow and wide viewports, keyboard, zoom, reduced motion.
+* Refresh, deep links, back/forward, expired session.
+* Console errors, failed requests, redirects, cookies, caching.
+* Loading, empty, error, offline, and slow-network states. Screenshot when layout matters.
 
-Measure with representative data, devices, and networks on a production-like build. Treat material regressions as failures unless explicitly accepted. Check the bundle-size impact of every new dependency.
+Name the browsers, viewports, and flows you checked. Could not run it? Say "not verified visually". One browser is not cross-browser. Critical journeys get a few stable, independent E2E tests.
 
-## 13. Verify in a Real Browser
+## 13. SEO and Locales
 
-For user-facing changes:
+**SEO (public pages only, never authenticated surfaces):** unique title, description, headings, and canonical URL; correct status codes; stable URLs or permanent redirects; robots and sitemaps; key content and links crawlable without JS where possible; structured data only if it matches visible content; private, placeholder, and duplicate pages kept out of the index; social preview metadata verified.
 
-* Run the app (production-like build where feasible) and drive the changed flow end to end in a real browser, not only a DOM test.
-* Check narrow and wide viewports, keyboard operation, zoom, and reduced motion.
-* Verify refresh, deep links, back and forward, and expired sessions.
-* Inspect console errors, failed requests, redirects, cookies, and caching.
-* Exercise loading, empty, error, offline, and slow-network states.
-* Capture a screenshot when layout or interaction correctness matters.
+**i18n (when localization exists or is expected):** no concatenated translations, no text in images, no copy in business logic. Handle plurals, grammatical variation, and text expansion. Format dates, numbers, currencies, names, and addresses per locale; show times in the relevant timezone. Define locale detection, fallback, URLs, and persistence; RTL if in scope. Test one long translation and one non-default locale.
 
-State which browsers, viewports, and flows were verified. If you could not run the UI, say "not verified visually". Do not claim cross-browser support from one browser.
+## 14. Privacy by Design
 
-Cover each critical user journey with an end-to-end test; keep E2E tests few, stable, and independent.
+Before collecting or exposing personal data, know its purpose, owner, users, retention, and deletion path.
 
-## 14. SEO (public pages only)
+* Collect and keep only what the purpose needs. Restrict access by role, tenant, environment, and need.
+* Define export, correction, deletion, and account closure, reaching logs, analytics, caches, search indexes, replicas, and backups.
+* Record consent where required. No optional tracking before it.
+* Review third-party processors and cross-border transfers. Synthetic or protected data outside production.
+* Never claim legal compliance from a technical check. Escalate jurisdiction questions to qualified privacy or legal review.
 
-* Unique title, description, headings, and canonical URL per page.
-* Correct status codes for success, redirects, missing content, and errors. Stable URLs, or permanent redirects when they change.
-* `robots` directives and sitemaps. Important content and links available to crawlers without JavaScript where the stack allows.
-* Structured data only when it matches visible content.
-* Keep private, placeholder, and duplicate pages out of the index. Verify social preview metadata.
+## 15. Web Checklist
 
-Do not apply this to authenticated or intentionally non-indexable surfaces.
+On top of the core Definition of Done, where relevant:
 
-## 15. Internationalization
-
-When localization exists or is reasonably expected:
-
-* Keep user-facing text out of business logic and never concatenate translated fragments.
-* Support plurals, grammatical variation, and text expansion.
-* Format dates, numbers, currencies, names, and addresses per locale. Display times in the relevant timezone.
-* Define locale detection, fallback, URLs, and persistence. Support right-to-left when in scope.
-* No text in images.
-
-Test one expanded translation and one non-default locale.
-
-## 16. Privacy by Design
-
-Before collecting or exposing personal data, identify purpose, owner, users, retention, and deletion path.
-
-* Collect and retain only what the purpose requires.
-* Restrict access by role, tenant, environment, and need.
-* Define export, correction, deletion, and account-closure behavior, including logs, analytics, caches, search indexes, replicas, and backups.
-* Record consent where required and load no optional tracking before it.
-* Review third-party processors and cross-border transfers.
-* Use synthetic or protected data outside production.
-
-Do not claim legal compliance from technical checks. Escalate jurisdiction-specific questions to qualified privacy or legal review.
-
-## 17. Web Completion Checklist
-
-In addition to the core Definition of Done, where relevant:
-
-* All UX states implemented; accessibility checked by keyboard.
-* Authorization verified server-side, with a tenant-isolation test.
+* All UX states built; keyboard pass done.
+* Server-side authz with a tenant-isolation test.
 * API and data compatibility assessed; migration and recovery path tested.
-* Observability covers the new failure modes.
-* Configuration and operational docs current.
-* Performance budgets preserved.
-* Browsers, viewports, and flows exercised and named in the report.
-* Privacy, SEO, and localization impacts considered.
-* Deployment and rollback understood.
+* Observability covers new failure modes; config docs current.
+* Performance budgets held.
+* Browsers, viewports, and flows named in the report.
+* Privacy, SEO, i18n, and rollback considered.
 
-The final report separates passed, failed, and not-run checks.
+Report passed, failed, and not-run checks separately.

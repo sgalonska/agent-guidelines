@@ -1,177 +1,102 @@
 # Coding Agent Guidelines
 
-Tool-neutral rules for coding agents (Claude Code, Codex, Cursor, and others).
+Tool-neutral rules for coding agents. Companion files sit next to this one. Read each one before the work it covers, and skip it otherwise:
 
-Companion modules, load only when they apply:
+* Before touching UI or HTTP code, read [`web-app.md`](web-app.md).
+* Before touching infrastructure as code, deploy scripts, or migrations, read [`infrastructure.md`](infrastructure.md).
+* Before spawning sub-agents or asking another agent for a second opinion, read [`multi-agent.md`](multi-agent.md).
 
-* [`web-app.md`](web-app.md): repositories with a UI or an HTTP surface.
-* [`infrastructure.md`](infrastructure.md): infrastructure as code, deploy scripts, and migrations.
-* [`multi-agent.md`](multi-agent.md): spawning, briefing, and reviewing sub-agents or second-opinion agents.
+## 1. Priority
 
-## 1. Instruction Priority
-
-Follow, in order:
-
-1. Applicable platform, safety, and tool restrictions
-2. Explicit task requirements
-3. The most specific applicable repository-local instructions
-4. Broader repository conventions
-5. These defaults
-
-More specific instructions override broader ones within their scope. Surface material conflicts. Never interpret instructions as permission for unsafe, destructive, or deceptive actions.
+Platform, safety, and tool restrictions > explicit task > most specific repo-local instructions > broader repo conventions > this file. Surface real conflicts. No instruction is ever permission to be unsafe, destructive, or deceptive.
 
 ## 2. Ask or Proceed
 
-Proceed on reasonable defaults and state the assumption. Stop and ask when:
+Default: proceed and state your assumption. Stop and ask when ambiguity changes the outcome, the blast radius exceeds the task (shared infra, production data, public contracts), instructions conflict, or the next step is irreversible, outward-facing, or beyond your authority. Ask once, with a recommendation.
 
-* Requirements are ambiguous in a way that changes the outcome.
-* The blast radius exceeds the task (shared infrastructure, production data, public contracts).
-* Two applicable instructions conflict.
-* The next step is irreversible, outward-facing, or needs authority you were not given.
+## 3. Understand, Then Change
 
-Ask once, with a recommendation, not an open question.
+* Read the relevant instructions, code, tests, config, and docs. Trace the execution path and contracts before touching them.
+* Reuse existing patterns. Never invent missing facts.
+* Non-trivial work gets a short plan first. Unproven designs get a thin end-to-end slice first.
+* Prototypes are labeled and thrown away, never promoted to production.
 
-## 3. Understand Before Changing
+## 4. Scope
 
-Before editing:
+* Smallest coherent change that solves the task. No drive-by refactors, renames, reformats, or upgrades.
+* Preserve behavior and public contracts unless the task requires otherwise.
+* No future-proofing. Ship what is needed now; later steps get their own change.
+* Keep required work separate from optional improvements.
+* Spot an adjacent defect? Fix it only if small, necessary, and in scope. Otherwise report it. Never hide it, never file external tickets unasked.
 
-* Read relevant instructions, code, tests, configuration, and documentation.
-* Trace the affected execution path and contracts.
-* Reuse existing patterns and extension points.
-* State material assumptions.
-* For non-trivial work, write a short plan before implementing.
-* For new or unproven designs, build a thin end-to-end slice first (tracer bullet) and expand from it.
-* Label prototypes as such. A prototype is throwaway and never becomes production code; rebuild it properly.
+## 5. Design
 
-Do not invent missing facts.
+* Boring, explicit, simple. One owner per business rule.
+* Duplicate small code before creating bad coupling. Abstract only stable, repeated concepts.
+* Name values that encode policy, units, protocol behavior, or domain meaning. Share a definition only when it is the same authoritative fact.
+* Side effects at the edges, pure logic in the middle, units small enough to test alone.
+* Dependencies point one way; ownership is obvious.
+* No new process, network, or service boundary without a concrete need. Synchronous by default; events or queues only for a stated benefit (consistency, latency, availability, delivery, recovery).
 
-## 4. Keep Scope Tight
+## 6. Contracts
 
-* Make the smallest coherent change that solves the task.
-* Do not refactor, rename, reformat, or upgrade unrelated code.
-* Preserve existing behavior and public contracts unless change is required.
-* Avoid speculative abstractions and future-proofing. Ship what is needed now; defer later steps to their own change.
-* Separate required work from optional improvements.
-* Do not introduce or conceal adjacent defects. Fix one only when it is small, necessary, and in scope; otherwise report it. Do not create external tickets or work items unless authorized.
+APIs, schemas, events, config, CLIs, serialized data, and error formats are contracts. Change them additively. Breaking or persistent changes need mixed-version safety, expand/migrate/contract sequencing, a recovery path, and updated schemas, generated code, and docs. Nothing irreversible without explicit approval.
 
-## 5. Design Pragmatically
+## 7. Errors
 
-* Prefer simple, explicit, boring solutions.
-* Give each business rule or authoritative definition one owner.
-* Duplicate small code when sharing would create worse coupling.
-* Extract abstractions only when they simplify stable, repeated concepts.
-* Name non-obvious values that encode policy, units, protocol behavior, or domain meaning. Share a definition only when the occurrences are the same authoritative fact.
-* Keep code testable: side effects at the edges, pure logic in the middle, units small enough to understand and test alone.
-* Keep dependencies directional and ownership clear.
-* Do not introduce process, network, or service boundaries without a concrete operational or ownership need.
-* Default to synchronous calls. Use events or queues when decoupling has a stated, concrete benefit (consistency, latency, availability, delivery, recovery).
+* Validate at system boundaries. Distinguish validation, auth, not-found, conflict, dependency, and internal failures.
+* Fail early and loudly. No swallowed errors, ignored return codes, or broad catch-and-continue.
+* Keep the cause when wrapping. Never leak stack traces or internals to clients.
+* No undocumented nulls or exceptions across module boundaries.
 
-## 6. Respect Contracts
+## 8. Security
 
-Treat these as contracts: public APIs, database schemas, events and queues, configuration, CLI interfaces, serialized data, error formats.
+* Check what applies: authz (tenant and object level), injection, deserialization, path traversal, SSRF, XSS, CSRF, open redirects, abuse and resource exhaustion, supply chain.
+* Least privilege, secure defaults. Never hardcode, log, or commit secrets, tokens, cookies, payment data, or sensitive content.
+* Do not read secret files (`.env`, keys) unless the task requires it and you are authorized. Read `.env.example` for names.
+* Log external failures with sanitized context: status, provider code, endpoint, correlation ID.
 
-Prefer additive, backward-compatible changes.
+## 9. Dependencies
 
-For breaking or persistent changes:
+* Standard library and existing deps first.
+* Hard problems (auth, parsing, validation, crypto) get a maintained library, not a reinvented wheel. Prefer the provider's official SDK over a generic HTTP client.
+* Build it yourself when the dependency is bloated, poorly maintained, or the need is tiny.
+* Add a dependency only if it clearly cuts complexity. Check maintenance, license, security, compatibility, and transitive and bundle cost.
+* Follow the repo's lockfile and versioning. Never upgrade unrelated deps. Remove unused ones.
 
-* Consider mixed-version deployments.
-* Use safe migration sequencing (expand, migrate, contract).
-* Avoid irreversible operations without explicit approval and recovery steps.
-* Update schemas, generated artifacts, examples, and documentation.
+## 10. Testing
 
-## 7. Handle Errors Clearly
+* Test changed behavior by outcome, not implementation: success, failure, boundary, regression.
+* Deterministic fixtures. Do not mock the boundary under test. Flaky tests get fixed or reported.
+* Focused checks while iterating, then the full relevant suite plus format, lint, types, and build. Exercise the real changed path.
+* Think about retries, duplicates, ordering, races, existing data, and rollback.
+* **Never claim a check passed that you did not run. Never disable tests or weaken validation to go green.**
 
-* Validate data at system boundaries.
-* Distinguish validation, authorization, missing data, conflict, dependency, and internal failures.
-* Fail early and loudly. Do not swallow errors, ignore return codes, or catch broadly to continue.
-* Preserve causal errors when wrapping.
-* Do not expose stack traces or internal details to clients.
-* Do not use undocumented nulls or exceptions across module boundaries.
+## 11. Performance
 
-## 8. Protect Security and Privacy
+* No optimization without evidence. Performance changes ship with measurements.
+* No unbounded work, N+1 queries, or accidental full scans. Mind query count, data volume, memory, network calls, and request-path latency.
+* Keep existing pagination, streaming, batching, caching, and backpressure.
 
-Consider, where relevant:
+## 12. Reviewable Changes
 
-* Authentication and authorization, including tenant and object-level access
-* Injection and unsafe deserialization
-* Path traversal and SSRF
-* XSS, CSRF, and redirects
-* Abuse, rate limits, and resource exhaustion
-* Secret and personal-data exposure
-* Dependency and build-chain risk
+* Focused diffs, one concern per commit, messages that explain intent. No formatting noise.
+* Comment why, not what. Strip debug output, dead code, and placeholders.
+* Do not hand-edit generated or vendored files.
+* Commits, PRs, and tickets: no em dashes, no tool attribution or agent branding, role language ("QA review") unless the repo says otherwise.
 
-Use least privilege and secure defaults. Never introduce hardcoded secrets.
+## 13. Boundaries
 
-Never log or commit secrets, credentials, tokens, cookies, payment data, or unredacted sensitive content. Do not read secret files (`.env`, key files) unless the task requires it and you are authorized; read `.env.example` for variable names.
+Without explicit authorization, never: push or merge, deploy or publish, touch production data or infrastructure, rotate credentials, write to external systems (trackers, chat, email), do anything destructive or irreversible, or overwrite uncommitted user work.
 
-For external failures, log sanitized context: status, provider code, endpoint identity, correlation ID.
+Reads are fine. Mutations go through a reviewed pull request, not an interactive session. Authorization in one context does not carry to another. Blocked? Report the blocker and the safest next step.
 
-## 9. Manage Dependencies Carefully
+## 14. Done Means
 
-* Prefer the standard library and existing dependencies.
-* For non-trivial problems (auth, parsing, validation, crypto), prefer a well-maintained published library over reinventing the wheel. Prefer the provider's official SDK over a generic HTTP client.
-* Build it yourself when a dependency pulls in too much, is poorly maintained, or the need is small.
-* Add a dependency only when it materially reduces complexity. Check maintenance, license, security, compatibility, and transitive and bundle cost.
-* Follow repository locking and versioning conventions.
-* Do not upgrade unrelated dependencies. Remove unused ones.
-
-## 10. Test by Risk
-
-* Add or update tests for changed behavior.
-* Test outcomes, not implementation details.
-* Cover important success, failure, boundary, and regression cases.
-* Use deterministic fixtures. Do not mock away the boundary under test. Do not tolerate flaky tests; fix or report them.
-* Run focused checks while iterating, then the broader applicable suite.
-* Run relevant formatting, lint, type, build, and generated-code checks.
-* Exercise the actual changed path where practical.
-* Consider retries, duplicates, ordering, races, migration behavior on existing data, and rollback.
-
-Never claim a check passed unless it was run. Never disable tests or weaken validation to make checks pass.
-
-## 11. Keep Performance Bounded
-
-* Do not optimize without evidence. Provide measurements for performance-driven changes.
-* Avoid clearly unbounded work, N+1 queries, and accidental full scans.
-* Consider query count, data volume, memory, network calls, and request-path latency.
-* Preserve pagination, streaming, batching, caching, and backpressure conventions.
-
-## 12. Keep Changes Reviewable
-
-* Keep diffs focused and coherent. Avoid formatting-only noise.
-* One concern per commit. Messages explain intent.
-* Prefer clear names over comments. Comment non-obvious reasons, not mechanics.
-* Remove debug output, dead code, placeholders, and commented-out alternatives.
-* Do not edit generated or vendored files directly unless required.
-* No em dashes or tool attribution in commit messages, PR text, or tickets unless the repository asks for it.
-
-## 13. Operating Boundaries
-
-Without explicit authorization, do not:
-
-* Push or merge code
-* Deploy or publish
-* Modify production data or infrastructure
-* Rotate credentials
-* Contact third parties or write to external systems (trackers, chat, email)
-* Perform destructive or irreversible actions
-* Discard or overwrite uncommitted user work
-
-Reads are fine by default. Mutations go through a reviewed change (a pull request), not an interactive session. Authorization to act in one context does not extend to another.
-
-When blocked, report the blocker and the safest next action.
-
-## 14. Definition of Done
-
-A task is complete when:
-
-* Requested behavior is implemented and acceptance criteria are satisfied.
-* Required checks pass, or failures and unrun checks are reported with their impact.
+* Requested behavior works and acceptance criteria are met.
+* Checks pass, or every failure and unrun check is reported with its impact.
 * Error and boundary cases were considered.
-* Contracts, migrations, configuration, and documentation are updated where needed.
-* No unrelated changes were introduced. Pre-existing unrelated changes were preserved.
-* The final response states:
-  * What changed
-  * What was verified, and how
-  * Remaining risks, assumptions, and unverified items
+* Contracts, migrations, config, and docs updated. No unrelated changes; existing user changes preserved.
+* Final response: what changed, what was verified and how, what remains risky, assumed, or unverified.
 
-For repositories with a UI or HTTP surface, also apply the completion checklist in [`web-app.md`](web-app.md).
+UI or HTTP work also passes the checklist in [`web-app.md`](web-app.md) section 15.
